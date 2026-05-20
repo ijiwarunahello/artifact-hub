@@ -1,0 +1,11 @@
+{
+  "name": "artifact-hub",
+  "owner": { "name": "ijiwarunahello" },
+  "plugins": [
+    {
+      "name": "artifact-hub",
+      "source": "./clients/claude-code",
+      "description": "Local MCP client for Artifact Hub. Adds /artifact-list, /artifact-search, /artifact-open and the using-artifact-hub skill."
+    }
+  ]
+}

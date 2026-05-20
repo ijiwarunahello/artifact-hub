@@ -1,0 +1,6 @@
+{
+  "name": "artifact-hub",
+  "version": "0.1.0",
+  "description": "Connect Claude Code to the local Artifact Hub MCP server for sharing artifacts with Codex and other agents.",
+  "author": { "name": "ijiwarunahello" }
+}

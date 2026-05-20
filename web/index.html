@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Artifact Hub</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">artifact hub</div>
+  <div class="status" id="status">connecting…</div>
+</header>
+<main class="layout">
+  <aside class="sidebar">
+    <div class="controls">
+      <input type="search" id="search" placeholder="search…" autocomplete="off" />
+      <select id="kind">
+        <option value="">all kinds</option>
+        <option value="html">html</option>
+        <option value="markdown">markdown</option>
+        <option value="code">code</option>
+        <option value="svg">svg</option>
+        <option value="mermaid">mermaid</option>
+      </select>
+    </div>
+    <ul id="list" class="list"></ul>
+  </aside>
+  <section class="preview">
+    <div class="preview-header" id="preview-header"></div>
+    <div class="preview-empty" id="preview-empty">
+      <div>
+        <span class="glyph">&gt;</span>
+        select an artifact from the list
+      </div>
+    </div>
+    <iframe id="frame" class="frame" title="artifact preview" hidden></iframe>
+  </section>
+</main>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

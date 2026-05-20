@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "artifact-hub": {
+      "type": "http",
+      "url": "http://127.0.0.1:27183/mcp"
+    }
+  }
+}
