@@ -12,8 +12,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const HOST = process.env.ARTIFACT_HUB_HOST ?? "127.0.0.1";
 const PORT = Number(process.env.ARTIFACT_HUB_PORT ?? 27183);
+const PUBLIC_HOST = process.env.ARTIFACT_HUB_PUBLIC_HOST ?? HOST;
 const VERSION = await readPkgVersion();
-const PUBLIC_BASE = `http://${HOST}:${PORT}`;
+const PUBLIC_BASE = `http://${PUBLIC_HOST}:${PORT}`;
 const WEB_DIR = resolve(__dirname, "..", "dist", "web");
 
 async function main() {
