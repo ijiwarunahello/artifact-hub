@@ -17,17 +17,26 @@ const emptyEl = document.getElementById("preview-empty") as HTMLDivElement;
 const statusEl = document.getElementById("status") as HTMLDivElement;
 const searchEl = document.getElementById("search") as HTMLInputElement;
 const kindEl = document.getElementById("kind") as HTMLSelectElement;
+const layoutEl = document.getElementById("layout") as HTMLElement;
+const backEl = document.getElementById("back-to-list") as HTMLButtonElement;
 
 let all: ArtifactMeta[] = [];
 let selectedId: string | null = null;
 let query = "";
 let kindFilter = "";
+let mobileView: "list" | "preview" = "list";
 
 async function loadList() {
   const res = await fetch("/api/artifacts");
   const data = await res.json();
   all = data.items;
   render();
+}
+
+function selectFromUrl() {
+  const id = new URLSearchParams(location.search).get("id");
+  if (id) select(id, { updateUrl: false });
+  else setMobileView("list", { updateUrl: false });
 }
 
 function render() {
@@ -53,8 +62,9 @@ function render() {
   }
 }
 
-function select(id: string) {
+function select(id: string, opts: { updateUrl?: boolean } = {}) {
   selectedId = id;
+  setMobileView("preview", { updateUrl: false });
   for (const li of listEl.querySelectorAll("li")) {
     li.classList.toggle("active", (li as HTMLLIElement).dataset.id === id);
   }
@@ -66,6 +76,21 @@ function select(id: string) {
   emptyEl.hidden = true;
   frameEl.hidden = false;
   frameEl.src = `/render/${encodeURIComponent(id)}?t=${Date.now()}`;
+  if (opts.updateUrl !== false) replaceUrlId(id);
+}
+
+function setMobileView(view: "list" | "preview", opts: { updateUrl?: boolean } = {}) {
+  mobileView = view;
+  layoutEl.classList.toggle("mobile-list", mobileView === "list");
+  layoutEl.classList.toggle("mobile-preview", mobileView === "preview");
+  if (view === "list" && opts.updateUrl !== false) replaceUrlId(null);
+}
+
+function replaceUrlId(id: string | null) {
+  const url = new URL(location.href);
+  if (id) url.searchParams.set("id", id);
+  else url.searchParams.delete("id");
+  history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 function connectWs() {
@@ -126,6 +151,10 @@ kindEl.addEventListener("change", () => {
   kindFilter = kindEl.value;
   render();
 });
+backEl.addEventListener("click", () => {
+  setMobileView("list");
+});
+window.addEventListener("popstate", selectFromUrl);
 
-loadList();
+loadList().then(selectFromUrl);
 connectWs();
