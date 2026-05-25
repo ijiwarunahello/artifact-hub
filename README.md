@@ -45,6 +45,29 @@ npm run dev       # server with watch
 npm run build:web # rebuild UI bundle
 ```
 
+### Sharing over Tailscale
+
+To make the web UI reachable from other devices on your tailnet:
+
+```bash
+npm run build
+npm run start:tailscale
+```
+
+This resolves the host's Tailscale IPv4 (via `tailscale ip -4`), prints a
+tailnet URL like `http://100.x.y.z:27183/`, and binds the server to `0.0.0.0`.
+The MCP `publicBaseUrl` is set to the Tailscale IP, so artifact dashboard URLs
+returned by MCP tools open from any tailnet device (and still work locally on
+the host because the Tailscale IP is reachable from the host itself).
+
+Requirements:
+- The `tailscale` CLI must be on PATH and signed in. The script exits with
+  status 1 if Tailscale is not installed or not connected.
+
+> **Heads up:** binding to `0.0.0.0` also exposes the server to any other
+> network the machine is on (LAN, etc.), not only Tailscale. If that matters,
+> use a firewall or stick with the default `npm start`.
+
 ## Installing the agent clients
 
 ### Claude Code
