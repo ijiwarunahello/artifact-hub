@@ -10,6 +10,7 @@
     "build": "npm run build:server && npm run build:web",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
+    "start:tailscale": "node scripts/start-tailscale.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"
