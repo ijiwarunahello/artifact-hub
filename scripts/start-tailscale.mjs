@@ -19,6 +19,13 @@ if (result.error) {
   console.error("[start:tailscale] failed to invoke tailscale:", result.error.message);
   process.exit(1);
 }
+if (result.status === null) {
+  console.error(
+    "[start:tailscale] `tailscale ip -4` was terminated by signal",
+    result.signal ?? "unknown",
+  );
+  process.exit(1);
+}
 if (result.status !== 0) {
   const stderr = (result.stderr ?? "").trim();
   console.error("[start:tailscale] `tailscale ip -4` exited with", result.status);
