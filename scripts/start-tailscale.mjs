@@ -42,7 +42,7 @@ console.log(`[start:tailscale] tailnet URL: http://${ip}:${port}/`);
 const env = {
   ...process.env,
   ARTIFACT_HUB_HOST: "0.0.0.0",
-  ARTIFACT_HUB_PUBLIC_HOST: "127.0.0.1",
+  ARTIFACT_HUB_PUBLIC_HOST: ip,
 };
 
 const child = spawn(process.execPath, [serverEntry], {
