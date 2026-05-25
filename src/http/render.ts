@@ -32,6 +32,34 @@ const md: MarkdownIt = new MarkdownIt({
   },
 });
 
+const defaultFence = md.renderer.rules.fence;
+md.renderer.rules.fence = (tokens, idx, options, env, slf) => {
+  const token = tokens[idx];
+  if (token) {
+    const info = token.info ? token.info.trim() : "";
+    if (info === "mermaid") {
+      return `<div class="mermaid">${escapeHtml(token.content)}</div>\n`;
+    }
+  }
+  return defaultFence
+    ? defaultFence(tokens, idx, options, env, slf)
+    : slf.renderToken(tokens, idx, options);
+};
+
+const MERMAID_LOADER = `<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({ startOnLoad: true, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default" });
+</script>`;
+
+const CSP_MARKDOWN_WITH_MERMAID = [
+  "default-src 'none'",
+  "script-src 'unsafe-inline' https://cdn.jsdelivr.net",
+  "style-src 'unsafe-inline'",
+  "img-src 'self' data:",
+  "frame-ancestors 'self'",
+  "connect-src https://cdn.jsdelivr.net",
+].join("; ");
+
 const BASE_STYLE = `
 :root { color-scheme: light dark; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; margin: 0; padding: 24px; line-height: 1.6; color: #111; background: #fff; }
@@ -60,11 +88,11 @@ const COMMON_CSP_NO_SCRIPT = [
 
 const HTML_CSP_WITH_SCRIPT = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' https://cdn.jsdelivr.net",
   "frame-ancestors 'self'",
 ].join("; ");
 
@@ -101,10 +129,18 @@ function renderHtml(artifact: Artifact): RenderResult {
 
 function renderMarkdown(artifact: Artifact): RenderResult {
   const body = md.render(artifact.content);
+  const hasMermaid = body.includes('<div class="mermaid">');
+  if (!hasMermaid) {
+    return {
+      html: shell(artifact.title, body),
+      csp: COMMON_CSP_NO_SCRIPT,
+      sandbox: "",
+    };
+  }
   return {
-    html: shell(artifact.title, body),
-    csp: COMMON_CSP_NO_SCRIPT,
-    sandbox: "",
+    html: shell(artifact.title, body + "\n" + MERMAID_LOADER),
+    csp: CSP_MARKDOWN_WITH_MERMAID,
+    sandbox: "allow-scripts",
   };
 }
 

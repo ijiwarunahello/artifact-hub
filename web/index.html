@@ -11,7 +11,7 @@
   <div class="brand">artifact hub</div>
   <div class="status" id="status">connecting…</div>
 </header>
-<main class="layout">
+<main class="layout mobile-list" id="layout">
   <aside class="sidebar">
     <div class="controls">
       <input type="search" id="search" placeholder="search…" autocomplete="off" />
@@ -27,7 +27,10 @@
     <ul id="list" class="list"></ul>
   </aside>
   <section class="preview">
-    <div class="preview-header" id="preview-header"></div>
+    <div class="preview-header">
+      <button class="back-button" id="back-to-list" type="button">&lt; list</button>
+      <div class="preview-title" id="preview-header"></div>
+    </div>
     <div class="preview-empty" id="preview-empty">
       <div>
         <span class="glyph">&gt;</span>

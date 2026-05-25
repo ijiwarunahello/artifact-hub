@@ -37,6 +37,10 @@ export function createHttpApp(opts: {
     return c.json(artifact);
   });
 
+  app.get("/a/:id", (c) =>
+    c.redirect(`/?id=${encodeURIComponent(c.req.param("id"))}`, 302),
+  );
+
   app.get("/render/:id", async (c) => {
     const id = c.req.param("id");
     const artifact = await opts.store.get(id);
