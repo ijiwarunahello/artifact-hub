@@ -5,7 +5,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { ArtifactStore } from "../store/index.js";
-import { ARTIFACT_KINDS } from "../types/artifact.js";
+import { ARTIFACT_KINDS, CREATABLE_ARTIFACT_KINDS } from "../types/artifact.js";
 
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
 
@@ -33,9 +33,9 @@ export async function createMcp(
       {
         title: "Create artifact",
         description:
-          "Upload a new artifact (HTML, markdown, code, svg, or mermaid). Same id overwrites and returns overwritten=true.",
+          "Upload a new artifact. kind must be one of: html (preferred for write-ups — supports layout, diagrams, interactivity), svg, mermaid, or code. Markdown is not accepted — use html instead so diagrams and structure ship with the prose. Same id overwrites and returns overwritten=true.",
         inputSchema: {
-          kind: z.enum(ARTIFACT_KINDS),
+          kind: z.enum(CREATABLE_ARTIFACT_KINDS),
           title: z.string().min(1).max(200),
           content: z.string(),
           id: z.string().min(1).max(120).optional(),
