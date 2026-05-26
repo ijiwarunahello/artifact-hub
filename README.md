@@ -100,9 +100,35 @@ hub is available over Tailscale without invoking the `tailscale` CLI at boot
 | `artifact_list`   | Lightweight metadata listing with filters              |
 | `artifact_get`    | Fetch full content for context injection               |
 | `artifact_search` | Full-text search with snippet                          |
+| `tool_stl_view`   | Return a browser URL that renders an STL model in 3D   |
 
 There is no delete tool. Remove artifacts manually with
 `rm -rf ~/.artifact-hub/artifacts/<id>` and restart the server.
+
+## Tools (single-shot utilities)
+
+In addition to artifacts, the hub hosts a `/t/<tool>` namespace for stateless
+utilities that turn an input into an in-browser view. Unlike artifacts these
+are not persisted, not searchable, and not listed in the Web UI side panel.
+
+| Tool       | URL          | Inputs                                        |
+|------------|--------------|-----------------------------------------------|
+| STL Preview| `/t/stl`     | `?artifact=<id>`, `?src=<url>`, or drag-drop  |
+
+### STL Preview
+
+`/t/stl` renders binary or ASCII STL models with three.js (OrbitControls,
+auto camera fit). Three input paths:
+
+- `/t/stl?artifact=<id>` — load an ASCII STL stored as `kind=code, language=stl`
+- `/t/stl?src=<url>` — fetch any STL the browser can reach (CORS applies)
+- drop an `.stl` file onto the viewer page
+
+Artifact-detail pages automatically show an **open in stl preview** link when
+the artifact is recognized as STL (`kind=code, language=stl`).
+
+The `tool_stl_view` MCP tool returns the corresponding URL given an
+`artifact_id` or `src` so agents can hand the link to a human.
 
 ## Running as a LaunchAgent
 

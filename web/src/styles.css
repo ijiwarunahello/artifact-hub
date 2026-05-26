@@ -199,6 +199,19 @@ html, body {
   color: var(--muted);
   font-size: 11px;
 }
+.preview-header .tool-link {
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.preview-header .tool-link:hover {
+  background: var(--row-hover);
+}
 .frame {
   flex: 1;
   width: 100%;

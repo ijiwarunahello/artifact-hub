@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
 import type { ArtifactStore } from "../store/index.js";
 import { renderArtifact } from "./render.js";
+import { createToolsRouter } from "./tools/index.js";
 
 export function createHttpApp(opts: {
   store: ArtifactStore;
@@ -37,6 +38,18 @@ export function createHttpApp(opts: {
     return c.json(artifact);
   });
 
+  app.get("/api/artifacts/:id/content", async (c) => {
+    const artifact = await opts.store.get(c.req.param("id"));
+    if (!artifact) return c.text("not found", 404);
+    return new Response(artifact.content, {
+      status: 200,
+      headers: {
+        "content-type": "application/octet-stream",
+        "cache-control": "no-store",
+      },
+    });
+  });
+
   app.get("/a/:id", (c) =>
     c.redirect(`/?id=${encodeURIComponent(c.req.param("id"))}`, 302),
   );
@@ -55,6 +68,8 @@ export function createHttpApp(opts: {
       },
     });
   });
+
+  app.route("/t", createToolsRouter());
 
   app.use(
     "/*",
