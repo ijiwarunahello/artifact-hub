@@ -41,10 +41,10 @@ Responsibilities:
    `ARTIFACT_HUB_PORT` or the default `27183`.
 5. `spawn(process.execPath, ["dist/server.js"], { stdio: "inherit", env })` with
    `env.ARTIFACT_HUB_HOST = "0.0.0.0"` and
-   `env.ARTIFACT_HUB_PUBLIC_HOST = <resolved Tailscale IP>` merged on top of
-   `process.env` (so MCP `publicBaseUrl` becomes `http://<tailscale-ip>:PORT`
-   and artifact dashboard URLs open from any tailnet device — local MCP
-   clients on the host can also reach the server via the Tailscale IP).
+   `env.ARTIFACT_HUB_PUBLIC_HOST = "127.0.0.1"` merged on top of `process.env`.
+   The MCP `publicBaseUrl` stays at loopback so on-host clients (Claude Code /
+   Codex) keep talking to `127.0.0.1`; tailnet devices reach the Web UI
+   directly via the resolved Tailscale IP (printed in the banner).
 6. Forward exit: if the child terminated by signal, re-raise the signal on the
    parent; otherwise `process.exit(code ?? 0)`.
 
@@ -87,9 +87,11 @@ const PUBLIC_BASE = `http://${PUBLIC_HOST}:${PORT}`;
 ```
 
 Default behavior is unchanged (when `ARTIFACT_HUB_PUBLIC_HOST` is unset,
-`PUBLIC_HOST` mirrors `HOST` exactly as today). The tailscale wrapper sets
-both env vars so that `HOST=0.0.0.0` (bind everywhere) and
-`PUBLIC_HOST=<tailscale IP>` (advertise the tailnet-reachable URL).
+`PUBLIC_HOST` mirrors `HOST` exactly as today). The tailscale wrapper (and
+the LaunchAgent installer) set both env vars so that `HOST=0.0.0.0` (bind
+everywhere) and `PUBLIC_HOST=127.0.0.1` (advertise MCP via loopback). The
+Web UI is reachable over the tailnet because the server binds 0.0.0.0; the
+MCP endpoint URL handed to local clients stays on loopback.
 
 ## Data flow
 
@@ -102,9 +104,10 @@ npm run start:tailscale
        ├─ console.log tailnet URL
        └─ spawn node dist/server.js
             (env: ARTIFACT_HUB_HOST=0.0.0.0,
-                  ARTIFACT_HUB_PUBLIC_HOST=<tailscale IP>)
+                  ARTIFACT_HUB_PUBLIC_HOST=127.0.0.1)
             └─ server listens on 0.0.0.0:PORT,
-               MCP publicBaseUrl = http://<tailscale IP>:PORT
+               MCP publicBaseUrl = http://127.0.0.1:PORT
+               Web UI reachable at http://<tailscale IP>:PORT
 ```
 
 ## Error cases
