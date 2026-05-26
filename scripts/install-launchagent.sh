@@ -25,6 +25,11 @@ cat > "$PLIST" <<PLIST
     <string>${REPO_ROOT}/dist/server.js</string>
   </array>
   <key>WorkingDirectory</key><string>${REPO_ROOT}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>ARTIFACT_HUB_HOST</key><string>0.0.0.0</string>
+    <key>ARTIFACT_HUB_PUBLIC_HOST</key><string>127.0.0.1</string>
+  </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>StandardOutPath</key><string>${LOG_DIR}/out.log</string>

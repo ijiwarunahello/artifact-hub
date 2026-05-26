@@ -56,9 +56,9 @@ npm run start:tailscale
 
 This resolves the host's Tailscale IPv4 (via `tailscale ip -4`), prints a
 tailnet URL like `http://100.x.y.z:27183/`, and binds the server to `0.0.0.0`.
-The MCP `publicBaseUrl` is set to the Tailscale IP, so artifact dashboard URLs
-returned by MCP tools open from any tailnet device (and still work locally on
-the host because the Tailscale IP is reachable from the host itself).
+The MCP `publicBaseUrl` stays at `127.0.0.1`, so MCP clients on the host (Claude
+Code / Codex) keep talking to loopback; tailnet devices browse the hub directly
+at the printed tailnet URL.
 
 Requirements:
 - The `tailscale` CLI must be on PATH and signed in. The script exits with
@@ -67,6 +67,11 @@ Requirements:
 > **Heads up:** binding to `0.0.0.0` also exposes the server to any other
 > network the machine is on (LAN, etc.), not only Tailscale. If that matters,
 > use a firewall or stick with the default `npm start`.
+
+For unattended startup at login, `./scripts/install-launchagent.sh` installs a
+LaunchAgent with the same `HOST=0.0.0.0` + `PUBLIC_HOST=127.0.0.1` env so the
+hub is available over Tailscale without invoking the `tailscale` CLI at boot
+(which is unreliable under launchd when using the Tailscale macOS GUI app).
 
 ## Installing the agent clients
 
