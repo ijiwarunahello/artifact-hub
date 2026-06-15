@@ -21,6 +21,11 @@ export async function createMcp(
   const transports = new Map<string, StreamableHTTPServerTransport>();
 
   const urlFor = (id: string) => `${opts.publicBaseUrl}/a/${id}`;
+  const toolUrl = (tool: string, params: Record<string, string>): string => {
+    const url = new URL(`${opts.publicBaseUrl}/t/${tool}`);
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    return url.toString();
+  };
 
   const buildServer = (): McpServer => {
     const server = new McpServer({
@@ -136,6 +141,37 @@ export async function createMcp(
         return {
           content: [{ type: "text", text: artifact.content }],
           structuredContent: { ...artifact },
+        };
+      },
+    );
+
+    server.registerTool(
+      "tool_stl_view",
+      {
+        title: "STL Preview",
+        description:
+          "Return a browser URL that renders an STL model in 3D. Provide artifact_id (an existing artifact saved as kind=code, language=stl) or src (a URL the browser can fetch).",
+        inputSchema: {
+          artifact_id: z.string().min(1).optional(),
+          src: z.string().min(1).optional(),
+        },
+      },
+      async ({ artifact_id, src }) => {
+        if (!artifact_id && !src) {
+          return {
+            content: [
+              { type: "text", text: "either artifact_id or src is required" },
+            ],
+            isError: true,
+          };
+        }
+        const params: Record<string, string> = artifact_id
+          ? { artifact: artifact_id }
+          : { src: src! };
+        const url = toolUrl("stl", params);
+        return {
+          content: [{ type: "text", text: url }],
+          structuredContent: { url },
         };
       },
     );

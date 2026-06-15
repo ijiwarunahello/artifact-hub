@@ -20,6 +20,7 @@ export default defineConfig({
       "/api": "http://127.0.0.1:27183",
       "/ws": { target: "ws://127.0.0.1:27183", ws: true },
       "/render": "http://127.0.0.1:27183",
+      "/t": "http://127.0.0.1:27183",
     },
   },
 });

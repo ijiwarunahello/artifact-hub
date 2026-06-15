@@ -69,14 +69,34 @@ function select(id: string, opts: { updateUrl?: boolean } = {}) {
     li.classList.toggle("active", (li as HTMLLIElement).dataset.id === id);
   }
   const meta = all.find((m) => m.id === id);
-  headerEl.innerHTML = meta
-    ? `<span><strong>${escapeHtml(meta.title)}</strong> <span class="tags">${escapeHtml(meta.id)}</span></span>
-       <span class="tags">${meta.tags.map(escapeHtml).join(" · ")}</span>`
-    : "";
+  headerEl.innerHTML = meta ? renderHeader(meta) : "";
   emptyEl.hidden = true;
   frameEl.hidden = false;
   frameEl.src = `/render/${encodeURIComponent(id)}?t=${Date.now()}`;
   if (opts.updateUrl !== false) replaceUrlId(id);
+}
+
+function renderHeader(meta: ArtifactMeta): string {
+  const tools = detectTools(meta);
+  const toolLinks = tools
+    .map(
+      (t) =>
+        `<a class="tool-link" href="/t/${t.name}?artifact=${encodeURIComponent(meta.id)}" target="_blank" rel="noopener">${escapeHtml(t.label)}</a>`,
+    )
+    .join(" ");
+  return `<span><strong>${escapeHtml(meta.title)}</strong> <span class="tags">${escapeHtml(meta.id)}</span>${toolLinks ? " " + toolLinks : ""}</span>
+     <span class="tags">${meta.tags.map(escapeHtml).join(" · ")}</span>`;
+}
+
+function detectTools(meta: ArtifactMeta): { name: string; label: string }[] {
+  const tools: { name: string; label: string }[] = [];
+  if (
+    meta.kind === "code" &&
+    (meta.language ?? "").toLowerCase() === "stl"
+  ) {
+    tools.push({ name: "stl", label: "open in stl preview" });
+  }
+  return tools;
 }
 
 function setMobileView(view: "list" | "preview", opts: { updateUrl?: boolean } = {}) {

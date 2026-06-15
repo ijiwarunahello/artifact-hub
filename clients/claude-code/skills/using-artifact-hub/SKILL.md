@@ -55,6 +55,299 @@ If you find yourself reaching for `markdown`, you're about to publish a
 write-up — convert it to `html` with a small style block, headings, and at
 least one diagram (mermaid block or inline SVG) and publish that instead.
 
+## HTML design guidelines
+
+Every HTML artifact is a self-contained document a human reads in a browser.
+Follow these guidelines so output is consistently readable and well-crafted.
+The aesthetic is Swiss Style: grid-based, whitespace-driven, no decoration
+for decoration's sake.
+
+### Reference CSS variables
+
+Copy this block into every HTML artifact's `<style>` and build on it.
+Adjust the accent color to suit the topic if desired; keep the rest stable.
+
+```css
+:root {
+  /* Fonts */
+  --font-sans: system-ui, -apple-system, "Helvetica Neue",
+               "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code",
+               "Fira Code", Menlo, monospace;
+
+  /* Type scale — Major Third (1.25) */
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-sm:   clamp(0.875rem, 0.85rem + 0.12vw, 0.9375rem);
+  --text-xs:   clamp(0.75rem, 0.73rem + 0.1vw, 0.8125rem);
+  --text-h4:   clamp(1.125rem, 1.05rem + 0.38vw, 1.25rem);
+  --text-h3:   clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+  --text-h2:   clamp(1.5rem, 1.25rem + 1.25vw, 1.875rem);
+  --text-h1:   clamp(1.875rem, 1.5rem + 1.88vw, 2.5rem);
+
+  /* Spacing — 8px grid */
+  --sp-1: 0.25rem; --sp-2: 0.5rem;  --sp-3: 0.75rem; --sp-4: 1rem;
+  --sp-5: 1.5rem;  --sp-6: 2rem;    --sp-8: 3rem;    --sp-10: 4rem;
+  --sp-12: 5rem;
+
+  /* Colors — monochrome + single accent */
+  --c-bg:         #ffffff;
+  --c-bg-subtle:  #f5f5f5;
+  --c-bg-muted:   #e8e8e8;
+  --c-text:       #1a1a1a;
+  --c-text-muted: #555555;
+  --c-border:     #d0d0d0;
+  --c-accent:     #0055ff;
+  --c-accent-bg:  #eef3ff;
+
+  /* Semantic — conventional UI colors */
+  --c-info:       #0055ff;  /* = accent */
+  --c-info-bg:    #eef3ff;  /* = accent-bg */
+  --c-tip:        #1a7f37;
+  --c-tip-bg:     #effbf3;
+  --c-warn:       #8a4500;
+  --c-warn-bg:    #fef4e8;
+  --c-danger:     #c41e1e;
+  --c-danger-bg:  #fdf0f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg:         #111111;
+    --c-bg-subtle:  #1c1c1c;
+    --c-bg-muted:   #282828;
+    --c-text:       #e5e5e5;
+    --c-text-muted: #aaaaaa;
+    --c-border:     #555555;
+    --c-accent:     #5599ff;
+    --c-accent-bg:  #1a2744;
+    --c-info:       #5599ff;
+    --c-info-bg:    #1a2744;
+    --c-tip:        #3dbb5e;
+    --c-tip-bg:     #0d2818;
+    --c-warn:       #e09050;
+    --c-warn-bg:    #2a1a00;
+    --c-danger:     #f07070;
+    --c-danger-bg:  #2a0a0a;
+  }
+}
+```
+
+Never load CJK web fonts (Noto Sans JP is 9 MB+). The system font stack
+covers macOS, Windows, iOS, and Android.
+
+### Typography rules
+
+- **Body**: `font-size: var(--text-base)` (16-18 px), `line-height: 1.7`.
+- **Headings**: limit to 3-4 levels. H1 bold 700, H2 semibold 600,
+  H3 medium 500. `line-height: 1.3`, `letter-spacing: -0.02em` on H1/H2.
+  All headings use `--c-text` (never muted) — differentiate by size and
+  weight only.
+- **Weight hierarchy**: Regular 400 (body) > Medium 500 > Semibold 600 >
+  Bold 700. Use weight and size, not color, to show importance.
+- **Code**: `font-family: var(--font-mono)`, `font-size: 0.9em`.
+
+### Spacing rules
+
+- Separate sections with whitespace (`margin-top: var(--sp-12)` = 80 px).
+  In constrained layouts (tabs, sidebars), combine whitespace with a
+  `border-top: 2px solid var(--c-border)` on subsection headings.
+- Heading `margin-top` must be larger than `margin-bottom` so the heading
+  attaches visually to the content below it, not the section above.
+- Constrain content width: `max-width: 40em` for CJK-heavy documents,
+  `max-width: 66ch` for Latin-heavy. Center with `margin-inline: auto`.
+
+### Color rules
+
+- Monochrome first. Use `--c-accent` only for links and primary actions.
+- Body text `--c-text` on `--c-bg` must exceed 4.5:1 contrast (WCAG AA).
+- Muted text `--c-text-muted` is for metadata, captions, and labels only.
+- **Semantic colors override monochrome**: 一般的に認知された
+  UI セマンティクス（info=blue, tip/success=green, warning=amber,
+  danger/error=red）は慣例に従う。これは装飾ではなく情報設計。
+- Callout types use dedicated CSS variables per severity:
+
+  | Type       | Color var      | Use case                          |
+  |------------|----------------|-----------------------------------|
+  | `.note`    | `--c-info`     | 補足情報、参考リンク              |
+  | `.tip`     | `--c-tip`      | ヒント、推奨事項、ベストプラクティス |
+  | `.warning` | `--c-warn`     | 注意事項、非推奨、前提条件        |
+  | `.danger`  | `--c-danger`   | 安全上の危険、データ損失、不可逆操作 |
+
+### Document structure
+
+Every HTML artifact must include:
+
+1. **H1 title** — one per document, at the top.
+2. **Summary box** — immediately after H1. A bordered/shaded box with 2-4
+   bullet points stating the key takeaways. The reader decides relevance
+   from this box alone.
+3. **Table of contents** — required when there are 3+ sections. Inline
+   `<nav>` with anchor links. Use the `.toc` pattern below.
+4. **Sections** (`<section>`) — each with an H2. Subsections use H3.
+
+Keep bold/highlighted text under 30 % of the total. Use `<details>` for
+secondary content in long documents.
+
+### Component patterns
+
+**Callout** — left-border accent, semantically-colored background.
+Text inside callouts always uses `--c-text` (never muted). The label
+uses the semantic color for its type. Follow conventional UI color
+associations: blue=info, green=tip, amber=warning, red=danger.
+```html
+<div class="callout warning">
+  <div class="callout-label">Warning</div>
+  <p>Important safety information here.</p>
+</div>
+```
+```css
+.callout { padding: var(--sp-4) var(--sp-5); margin: var(--sp-6) 0;
+           background: var(--c-bg-subtle); border-left: 3px solid var(--c-border);
+           color: var(--c-text); }
+.callout.note    { border-left-color: var(--c-info);   background: var(--c-info-bg); }
+.callout.tip     { border-left-color: var(--c-tip);    background: var(--c-tip-bg); }
+.callout.warning { border-left-color: var(--c-warn);   background: var(--c-warn-bg); }
+.callout.danger  { border-left-color: var(--c-danger); background: var(--c-danger-bg); }
+.callout-label   { font-size: var(--text-xs); font-weight: 600;
+                   text-transform: uppercase; letter-spacing: 0.05em; }
+.callout.note .callout-label    { color: var(--c-info); }
+.callout.tip .callout-label     { color: var(--c-tip); }
+.callout.warning .callout-label { color: var(--c-warn); }
+.callout.danger .callout-label  { color: var(--c-danger); }
+```
+
+**Table** — wrap in a bordered container for clear boundaries:
+```css
+.table-wrap { border: 1px solid var(--c-border); overflow-x: auto;
+              margin: var(--sp-4) 0 var(--sp-6); }
+table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+thead { background: var(--c-bg-muted); border-bottom: 2px solid var(--c-border); }
+th { text-align: left; padding: var(--sp-2) var(--sp-3);
+     font-weight: 600; color: var(--c-text); }
+td { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--c-border); }
+tbody tr:nth-child(even) { background: var(--c-bg-subtle); }
+```
+
+**Code block**:
+```css
+pre { background: var(--c-bg-muted); padding: var(--sp-4) var(--sp-5);
+      overflow-x: auto; font-family: var(--font-mono);
+      font-size: var(--text-sm); line-height: 1.6;
+      border: 1px solid var(--c-border); border-radius: 2px; }
+```
+
+**Table of contents**:
+```css
+.toc { margin: var(--sp-6) 0 var(--sp-8); padding: var(--sp-4) var(--sp-5);
+       border: 1px solid var(--c-border); }
+.toc-title { font-size: var(--text-sm); font-weight: 600;
+             letter-spacing: 0.05em; text-transform: uppercase;
+             color: var(--c-text-muted); margin-bottom: var(--sp-3); }
+.toc ol { list-style: none; padding-left: 0; margin: 0; }
+.toc a { color: var(--c-text); text-decoration: none;
+         border-bottom: 1px solid var(--c-border); }
+.toc a:hover { color: var(--c-accent); border-bottom-color: var(--c-accent); }
+```
+
+### Responsive rules
+
+- `clamp()` in the type scale handles font scaling — no media queries needed
+  for font sizes.
+- Tables: add `overflow-x: auto` wrapper on narrow screens.
+- Content padding: `var(--sp-4)` on mobile, `var(--sp-8)` on desktop via
+  one media query at `min-width: 640px`.
+
+### HTML template skeleton
+
+Use this as the starting point for every HTML artifact:
+
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <style>
+    /* Paste reference CSS variables above, then: */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    body { font-family: var(--font-sans); font-size: var(--text-base);
+           line-height: 1.7; color: var(--c-text); background: var(--c-bg);
+           padding: var(--sp-4); }
+    @media (min-width: 640px) { body { padding: var(--sp-8); } }
+    article { max-width: 40em; margin-inline: auto; }
+    h1 { font-size: var(--text-h1); font-weight: 700; line-height: 1.3;
+         letter-spacing: -0.02em; margin-bottom: var(--sp-6); }
+    h2 { font-size: var(--text-h2); font-weight: 600; line-height: 1.3;
+         letter-spacing: -0.01em;
+         margin-top: var(--sp-12); margin-bottom: var(--sp-4); }
+    h3 { font-size: var(--text-h3); font-weight: 500; line-height: 1.4;
+         margin-top: var(--sp-8); margin-bottom: var(--sp-3);
+         padding-top: var(--sp-5); border-top: 2px solid var(--c-border); }
+    p  { margin-bottom: var(--sp-4); }
+    a  { color: var(--c-accent); }
+    .summary { padding: var(--sp-5) var(--sp-6); margin-bottom: var(--sp-8);
+               background: var(--c-bg-subtle); border: 1px solid var(--c-border); }
+    .summary h2 { font-size: var(--text-h4); margin: 0 0 var(--sp-3); }
+    .summary ul { margin: 0; padding-left: var(--sp-5); }
+    .meta { font-size: var(--text-sm); color: var(--c-text-muted);
+            margin-bottom: var(--sp-6); }
+    /* Add callout, table, code, toc styles as needed */
+  </style>
+</head>
+<body>
+  <article>
+    <header>
+      <h1>{{title}}</h1>
+      <p class="meta">{{date}}  .  {{category}}</p>
+    </header>
+    <div class="summary">
+      <h2>Key points</h2>
+      <ul>
+        <li>{{point 1}}</li>
+        <li>{{point 2}}</li>
+        <li>{{point 3}}</li>
+      </ul>
+    </div>
+    <nav class="toc"> <!-- include when 3+ sections -->
+      <div class="toc-title">Contents</div>
+      <ol>
+        <li><a href="#s1">{{section 1}}</a></li>
+        <li><a href="#s2">{{section 2}}</a></li>
+      </ol>
+    </nav>
+    <section id="s1">
+      <h2>{{section 1}}</h2>
+      <p>...</p>
+    </section>
+  </article>
+</body>
+</html>
+```
+
+### Pre-publish checklist
+
+Before calling `artifact_create`, verify:
+
+- All elements align to the spacing system (8 px grid)
+- No emoji in text or as indicators — use geometric glyphs (`>`, `.`, `*`)
+- Content width is constrained (`max-width: 40em` or `66ch`)
+- Summary box with key takeaways appears after H1
+- Text contrast >= 4.5:1 (use the reference palette)
+- No horizontal scrolling on mobile (375 px viewport)
+- Dark mode does not break layout (`prefers-color-scheme: dark`)
+
+### Sources
+
+These guidelines are informed by the following research:
+
+- **Scanability**: [5 Formatting Techniques for Long-Form Content](https://www.nngroup.com/articles/formatting-long-form-content/) (NN/g)
+- **Type scale**: [CSS-only Fluid Modular Type Scales](https://utopia.fyi/blog/css-modular-scales/) (Utopia), [Font Size Guidelines](https://www.learnui.design/blog/mobile-desktop-website-font-size-guidelines.html) (LearnUI.design)
+- **Spacing**: [8-Point Grid System](https://wpdean.com/what-is-the-8-point-grid-system/) (WP Dean), [USWDS Spacing Units](https://designsystem.digital.gov/design-tokens/spacing-units/)
+- **Swiss Style**: [International Typographic Style in Web Design](https://medium.com/design-bootcamp/international-typographic-style-in-web-design-a23fddd599f5) (Bootcamp)
+- **Readability**: [Optimal Line Length](https://www.uxpin.com/studio/blog/optimal-line-length-for-readability/) (UXPin), [WCAG 2.2](https://www.w3.org/TR/WCAG22/) (W3C)
+- **CJK fonts**: [Best Japanese CSS font-family](https://www.bloomstreetjapan.com/best-japanese-font-setting-for-websites/) (Bloomstreet)
+
 ## Writing style — no click-bait
 
 Titles, summaries, headings, and prose go straight onto a human's dashboard,
