@@ -91,25 +91,43 @@ Adjust the accent color to suit the topic if desired; keep the rest stable.
 
   /* Colors — monochrome + single accent */
   --c-bg:         #ffffff;
-  --c-bg-subtle:  #f8f8f8;
-  --c-bg-muted:   #f0f0f0;
+  --c-bg-subtle:  #f5f5f5;
+  --c-bg-muted:   #e8e8e8;
   --c-text:       #1a1a1a;
-  --c-text-muted: #666666;
-  --c-border:     #e0e0e0;
+  --c-text-muted: #555555;
+  --c-border:     #d0d0d0;
   --c-accent:     #0055ff;
-  --c-accent-bg:  #f0f4ff;
+  --c-accent-bg:  #eef3ff;
+
+  /* Semantic — conventional UI colors */
+  --c-info:       #0055ff;  /* = accent */
+  --c-info-bg:    #eef3ff;  /* = accent-bg */
+  --c-tip:        #1a7f37;
+  --c-tip-bg:     #effbf3;
+  --c-warn:       #8a4500;
+  --c-warn-bg:    #fef4e8;
+  --c-danger:     #c41e1e;
+  --c-danger-bg:  #fdf0f0;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --c-bg:         #111111;
-    --c-bg-subtle:  #1a1a1a;
-    --c-bg-muted:   #222222;
+    --c-bg-subtle:  #1c1c1c;
+    --c-bg-muted:   #282828;
     --c-text:       #e5e5e5;
-    --c-text-muted: #999999;
-    --c-border:     #333333;
+    --c-text-muted: #aaaaaa;
+    --c-border:     #555555;
     --c-accent:     #5599ff;
     --c-accent-bg:  #1a2744;
+    --c-info:       #5599ff;
+    --c-info-bg:    #1a2744;
+    --c-tip:        #3dbb5e;
+    --c-tip-bg:     #0d2818;
+    --c-warn:       #e09050;
+    --c-warn-bg:    #2a1a00;
+    --c-danger:     #f07070;
+    --c-danger-bg:  #2a0a0a;
   }
 }
 ```
@@ -122,14 +140,17 @@ covers macOS, Windows, iOS, and Android.
 - **Body**: `font-size: var(--text-base)` (16-18 px), `line-height: 1.7`.
 - **Headings**: limit to 3-4 levels. H1 bold 700, H2 semibold 600,
   H3 medium 500. `line-height: 1.3`, `letter-spacing: -0.02em` on H1/H2.
+  All headings use `--c-text` (never muted) — differentiate by size and
+  weight only.
 - **Weight hierarchy**: Regular 400 (body) > Medium 500 > Semibold 600 >
-  Bold 700. Use weight, not color, to show importance.
+  Bold 700. Use weight and size, not color, to show importance.
 - **Code**: `font-family: var(--font-mono)`, `font-size: 0.9em`.
 
 ### Spacing rules
 
-- Separate sections with whitespace (`margin-top: var(--sp-12)` = 80 px),
-  not borders or horizontal rules.
+- Separate sections with whitespace (`margin-top: var(--sp-12)` = 80 px).
+  In constrained layouts (tabs, sidebars), combine whitespace with a
+  `border-top: 2px solid var(--c-border)` on subsection headings.
 - Heading `margin-top` must be larger than `margin-bottom` so the heading
   attaches visually to the content below it, not the section above.
 - Constrain content width: `max-width: 40em` for CJK-heavy documents,
@@ -140,8 +161,17 @@ covers macOS, Windows, iOS, and Android.
 - Monochrome first. Use `--c-accent` only for links and primary actions.
 - Body text `--c-text` on `--c-bg` must exceed 4.5:1 contrast (WCAG AA).
 - Muted text `--c-text-muted` is for metadata, captions, and labels only.
-- Callout types: **note** (accent-blue left border) and **warning**
-  (`#b35900` left border) — at most 2-3 types. No emoji indicators.
+- **Semantic colors override monochrome**: 一般的に認知された
+  UI セマンティクス（info=blue, tip/success=green, warning=amber,
+  danger/error=red）は慣例に従う。これは装飾ではなく情報設計。
+- Callout types use dedicated CSS variables per severity:
+
+  | Type       | Color var      | Use case                          |
+  |------------|----------------|-----------------------------------|
+  | `.note`    | `--c-info`     | 補足情報、参考リンク              |
+  | `.tip`     | `--c-tip`      | ヒント、推奨事項、ベストプラクティス |
+  | `.warning` | `--c-warn`     | 注意事項、非推奨、前提条件        |
+  | `.danger`  | `--c-danger`   | 安全上の危険、データ損失、不可逆操作 |
 
 ### Document structure
 
@@ -160,27 +190,42 @@ secondary content in long documents.
 
 ### Component patterns
 
-**Callout** — left-border accent, subtle background:
+**Callout** — left-border accent, semantically-colored background.
+Text inside callouts always uses `--c-text` (never muted). The label
+uses the semantic color for its type. Follow conventional UI color
+associations: blue=info, green=tip, amber=warning, red=danger.
 ```html
-<div class="callout note">
-  <p>Important context here.</p>
+<div class="callout warning">
+  <div class="callout-label">Warning</div>
+  <p>Important safety information here.</p>
 </div>
 ```
 ```css
 .callout { padding: var(--sp-4) var(--sp-5); margin: var(--sp-6) 0;
-           background: var(--c-bg-subtle); border-left: 3px solid var(--c-border); }
-.callout.note    { border-left-color: var(--c-accent); background: var(--c-accent-bg); }
-.callout.warning { border-left-color: #b35900; background: #fff8f0; }
+           background: var(--c-bg-subtle); border-left: 3px solid var(--c-border);
+           color: var(--c-text); }
+.callout.note    { border-left-color: var(--c-info);   background: var(--c-info-bg); }
+.callout.tip     { border-left-color: var(--c-tip);    background: var(--c-tip-bg); }
+.callout.warning { border-left-color: var(--c-warn);   background: var(--c-warn-bg); }
+.callout.danger  { border-left-color: var(--c-danger); background: var(--c-danger-bg); }
+.callout-label   { font-size: var(--text-xs); font-weight: 600;
+                   text-transform: uppercase; letter-spacing: 0.05em; }
+.callout.note .callout-label    { color: var(--c-info); }
+.callout.tip .callout-label     { color: var(--c-tip); }
+.callout.warning .callout-label { color: var(--c-warn); }
+.callout.danger .callout-label  { color: var(--c-danger); }
 ```
 
-**Table** — horizontal rules only, uppercase small headers:
+**Table** — wrap in a bordered container for clear boundaries:
 ```css
+.table-wrap { border: 1px solid var(--c-border); overflow-x: auto;
+              margin: var(--sp-4) 0 var(--sp-6); }
 table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
-thead { border-bottom: 2px solid var(--c-text); }
+thead { background: var(--c-bg-muted); border-bottom: 2px solid var(--c-border); }
 th { text-align: left; padding: var(--sp-2) var(--sp-3);
-     font-size: var(--text-xs); letter-spacing: 0.05em;
-     text-transform: uppercase; color: var(--c-text-muted); }
+     font-weight: 600; color: var(--c-text); }
 td { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--c-border); }
+tbody tr:nth-child(even) { background: var(--c-bg-subtle); }
 ```
 
 **Code block**:
@@ -237,8 +282,8 @@ Use this as the starting point for every HTML artifact:
          letter-spacing: -0.01em;
          margin-top: var(--sp-12); margin-bottom: var(--sp-4); }
     h3 { font-size: var(--text-h3); font-weight: 500; line-height: 1.4;
-         color: var(--c-text-muted);
-         margin-top: var(--sp-8); margin-bottom: var(--sp-3); }
+         margin-top: var(--sp-8); margin-bottom: var(--sp-3);
+         padding-top: var(--sp-5); border-top: 2px solid var(--c-border); }
     p  { margin-bottom: var(--sp-4); }
     a  { color: var(--c-accent); }
     .summary { padding: var(--sp-5) var(--sp-6); margin-bottom: var(--sp-8);
