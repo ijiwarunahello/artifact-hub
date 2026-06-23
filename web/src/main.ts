@@ -10,6 +10,7 @@ interface ArtifactMeta {
   updatedAt: string;
 }
 
+const brandEl = document.getElementById("brand") as HTMLAnchorElement;
 const listEl = document.getElementById("list") as HTMLUListElement;
 const frameEl = document.getElementById("frame") as HTMLIFrameElement;
 const headerEl = document.getElementById("preview-header") as HTMLDivElement;
@@ -19,6 +20,9 @@ const searchEl = document.getElementById("search") as HTMLInputElement;
 const kindEl = document.getElementById("kind") as HTMLSelectElement;
 const layoutEl = document.getElementById("layout") as HTMLElement;
 const backEl = document.getElementById("back-to-list") as HTMLButtonElement;
+const statsTotalEl = document.getElementById("stats-total") as HTMLSpanElement;
+const statsBarsEl = document.getElementById("stats-bars") as HTMLDivElement;
+const recentListEl = document.getElementById("recent-list") as HTMLUListElement;
 
 let all: ArtifactMeta[] = [];
 let selectedId: string | null = null;
@@ -31,6 +35,7 @@ async function loadList() {
   const data = await res.json();
   all = data.items;
   render();
+  renderTopContent();
 }
 
 function selectFromUrl() {
@@ -144,6 +149,52 @@ function upsert(meta: ArtifactMeta) {
   else all.unshift(meta);
   all.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   render();
+  renderTopContent();
+}
+
+function renderTopContent() {
+  statsTotalEl.textContent = String(all.length);
+
+  const counts = new Map<string, number>();
+  for (const m of all) counts.set(m.kind, (counts.get(m.kind) ?? 0) + 1);
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const max = sorted.length > 0 ? sorted[0][1] : 1;
+
+  statsBarsEl.innerHTML = sorted
+    .map(
+      ([kind, count]) =>
+        `<div class="stats-row">
+          <span class="kind">${escapeHtml(kind)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${(count / max) * 100}%"></div></div>
+          <span class="count">${count}</span>
+        </div>`,
+    )
+    .join("");
+
+  const recent = all.slice(0, 5);
+  if (recent.length === 0) {
+    recentListEl.innerHTML = '<li class="recent-empty">no artifacts yet</li>';
+    return;
+  }
+  recentListEl.innerHTML = recent
+    .map(
+      (m) =>
+        `<li>
+          <a data-id="${escapeHtml(m.id)}">
+            <span class="kind-badge">${escapeHtml(m.kind)}</span>
+            <span class="title-text">${escapeHtml(m.title)}</span>
+          </a>
+          <span class="time">${relTime(m.updatedAt)}</span>
+        </li>`,
+    )
+    .join("");
+
+  for (const a of recentListEl.querySelectorAll("a[data-id]")) {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      select((a as HTMLAnchorElement).dataset.id!);
+    });
+  }
 }
 
 function escapeHtml(s: string): string {
@@ -174,6 +225,21 @@ kindEl.addEventListener("change", () => {
 backEl.addEventListener("click", () => {
   setMobileView("list");
 });
+brandEl.addEventListener("click", (e) => {
+  e.preventDefault();
+  deselect();
+});
+
+function deselect() {
+  selectedId = null;
+  for (const li of listEl.querySelectorAll("li")) li.classList.remove("active");
+  headerEl.innerHTML = "";
+  emptyEl.hidden = false;
+  frameEl.hidden = true;
+  frameEl.src = "";
+  replaceUrlId(null);
+  setMobileView("list", { updateUrl: false });
+}
 window.addEventListener("popstate", selectFromUrl);
 
 loadList().then(selectFromUrl);

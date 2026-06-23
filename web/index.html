@@ -8,7 +8,7 @@
 </head>
 <body>
 <header class="topbar">
-  <div class="brand">artifact hub</div>
+  <a class="brand" id="brand" href="/">artifact hub</a>
   <div class="status" id="status">connecting…</div>
 </header>
 <main class="layout mobile-list" id="layout">
@@ -32,9 +32,25 @@
       <div class="preview-title" id="preview-header"></div>
     </div>
     <div class="preview-empty" id="preview-empty">
-      <div>
-        <span class="glyph">&gt;</span>
-        select an artifact from the list
+      <div class="top-content">
+        <section class="hero">
+          <h1>artifact hub</h1>
+          <p>Local artifact server for AI agents</p>
+        </section>
+        <section class="stats">
+          <div class="stats-total">
+            <span id="stats-total">--</span>
+            <span class="stats-label">artifacts</span>
+          </div>
+          <div class="stats-rows" id="stats-bars"></div>
+        </section>
+        <section class="recent">
+          <h2 class="section-title">recent</h2>
+          <ul class="recent-list" id="recent-list"></ul>
+        </section>
+        <nav class="top-links">
+          <a href="/t/stl"><span class="glyph">&gt;</span> stl viewer</a>
+        </nav>
       </div>
     </div>
     <iframe id="frame" class="frame" title="artifact preview" hidden></iframe>
