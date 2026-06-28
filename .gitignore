@@ -5,3 +5,4 @@ dist/
 coverage/
 .tsbuildinfo
 src/http/render-css.generated.ts
+.wrangler/

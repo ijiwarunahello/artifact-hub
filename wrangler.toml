@@ -1,17 +1,18 @@
 name = "artifact-hub"
 main = "src/worker.ts"
 compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "./dist/web"
 
 [[kv_namespaces]]
 binding = "ARTIFACT_KV"
-id = "PLACEHOLDER_KV_ID"
+id = "e778c9aa4e974ad4870c8554ce453476"
 
 [[r2_buckets]]
 binding = "ARTIFACT_R2"
 bucket_name = "artifact-hub"
 
 [vars]
-PUBLIC_BASE_URL = "https://artifact-hub.PLACEHOLDER.workers.dev"
+PUBLIC_BASE_URL = "https://artifact-hub.ijiwarunahello.workers.dev"
