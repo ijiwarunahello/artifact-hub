@@ -21,8 +21,15 @@ export interface ArtifactMeta {
   tags: string[];
   source?: ArtifactSource;
   summary?: string;
+  contentBytes?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface StorageStats {
+  totalBytes: number;
+  objectCount: number;
+  artifacts: Array<{ id: string; bytes: number; updatedAt: string }>;
 }
 
 export interface Artifact extends ArtifactMeta {

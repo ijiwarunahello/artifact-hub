@@ -6,6 +6,7 @@ import {
   type CreateInput,
   type ListFilter,
   type SearchHit,
+  type StorageStats,
   type UpdateInput,
 } from "../types/artifact.js";
 import type { IArtifactStore, StoreEvent, StoreListener } from "./interface.js";
@@ -64,6 +65,7 @@ export class CloudflareStore implements IArtifactStore {
     const isoNow = now.toISOString();
     const id = resolveId(input, this.index, now);
     const existing = this.index.get(id);
+    const contentBytes = new TextEncoder().encode(input.content).byteLength;
     const meta: ArtifactMeta = {
       id,
       title: input.title,
@@ -72,6 +74,7 @@ export class CloudflareStore implements IArtifactStore {
       tags: input.tags ?? [],
       source: input.source,
       summary: input.summary,
+      contentBytes,
       createdAt: existing?.createdAt ?? isoNow,
       updatedAt: isoNow,
     };
@@ -89,6 +92,8 @@ export class CloudflareStore implements IArtifactStore {
       throw new Error(`artifact not found: ${input.id}`);
     }
     const isoNow = new Date().toISOString();
+    const content = input.content ?? await this.readContent(input.id);
+    const contentBytes = new TextEncoder().encode(content).byteLength;
     const meta: ArtifactMeta = {
       ...existing,
       title: input.title ?? existing.title,
@@ -96,9 +101,9 @@ export class CloudflareStore implements IArtifactStore {
       summary: input.summary ?? existing.summary,
       language: input.language ?? existing.language,
       source: input.source ?? existing.source,
+      contentBytes,
       updatedAt: isoNow,
     };
-    const content = input.content ?? await this.readContent(input.id);
     await this.r2.put(`content/${meta.id}`, content);
     await this.kv.put(`meta:${meta.id}`, JSON.stringify(meta));
     this.index.set(meta.id, meta);
@@ -160,6 +165,33 @@ export class CloudflareStore implements IArtifactStore {
       if (hits.length >= limit) break;
     }
     return hits;
+  }
+
+  async delete(id: string): Promise<void> {
+    if (!this.index.has(id)) {
+      throw new Error(`artifact not found: ${id}`);
+    }
+    await this.r2.delete(`content/${id}`);
+    await this.kv.delete(`meta:${id}`);
+    this.index.delete(id);
+    await this.persistIndex();
+    this.emit({ type: "deleted", id });
+  }
+
+  async storageStats(): Promise<StorageStats> {
+    const artifacts: StorageStats["artifacts"] = [];
+    let cursor: string | undefined;
+    do {
+      const result = await this.r2.list({ prefix: "content/", cursor, limit: 1000 });
+      for (const obj of result.objects) {
+        const id = obj.key.replace(/^content\//, "");
+        artifacts.push({ id, bytes: obj.size, updatedAt: obj.uploaded.toISOString() });
+      }
+      cursor = result.truncated ? result.cursor : undefined;
+    } while (cursor);
+    artifacts.sort((a, b) => b.bytes - a.bytes);
+    const totalBytes = artifacts.reduce((sum, a) => sum + a.bytes, 0);
+    return { totalBytes, objectCount: artifacts.length, artifacts };
   }
 
   private async readContent(id: string): Promise<string> {

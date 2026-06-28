@@ -122,4 +122,70 @@ describe("ArtifactStore", () => {
     expect(Array.isArray(idx)).toBe(true);
     expect(idx).toHaveLength(1);
   });
+
+  it("sets contentBytes on create", async () => {
+    const { meta } = await store.create({
+      kind: "html",
+      title: "Sized",
+      content: "<h1>Hello</h1>",
+    });
+    expect(meta.contentBytes).toBe(new TextEncoder().encode("<h1>Hello</h1>").byteLength);
+  });
+
+  it("updates contentBytes on update", async () => {
+    const { meta } = await store.create({
+      kind: "html",
+      title: "Before",
+      content: "short",
+    });
+    const updated = await store.update({ id: meta.id, content: "a much longer piece of content" });
+    expect(updated.contentBytes).toBe(
+      new TextEncoder().encode("a much longer piece of content").byteLength,
+    );
+  });
+
+  it("deletes an artifact and removes from index", async () => {
+    const { meta } = await store.create({
+      kind: "markdown",
+      title: "Doomed",
+      content: "bye",
+    });
+    expect(store.has(meta.id)).toBe(true);
+    await store.delete(meta.id);
+    expect(store.has(meta.id)).toBe(false);
+    expect(store.list()).toHaveLength(0);
+    expect(await store.get(meta.id)).toBeUndefined();
+  });
+
+  it("throws when deleting unknown id", async () => {
+    await expect(store.delete("nonexistent")).rejects.toThrow("artifact not found");
+  });
+
+  it("emits deleted event", async () => {
+    const events: string[] = [];
+    store.subscribe((e) => events.push(e.type));
+    const { meta } = await store.create({ kind: "markdown", title: "x", content: "a" });
+    await store.delete(meta.id);
+    expect(events).toEqual(["created", "deleted"]);
+  });
+
+  it("returns storage stats with correct totals", async () => {
+    await store.create({ kind: "html", title: "A", content: "aaa" });
+    await store.create({ kind: "html", title: "B", content: "bbbbbb" });
+    const stats = await store.storageStats();
+    expect(stats.objectCount).toBe(2);
+    expect(stats.totalBytes).toBeGreaterThan(0);
+    expect(stats.artifacts).toHaveLength(2);
+    expect(stats.artifacts[0]!.bytes).toBeGreaterThanOrEqual(stats.artifacts[1]!.bytes);
+  });
+
+  it("storageStats reflects deletion", async () => {
+    const { meta } = await store.create({ kind: "html", title: "A", content: "data" });
+    await store.create({ kind: "html", title: "B", content: "more data" });
+    const before = await store.storageStats();
+    await store.delete(meta.id);
+    const after = await store.storageStats();
+    expect(after.objectCount).toBe(before.objectCount - 1);
+    expect(after.totalBytes).toBeLessThan(before.totalBytes);
+  });
 });

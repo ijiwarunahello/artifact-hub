@@ -55,6 +55,14 @@ export function registerTools(
     },
     async (args) => {
       assertSize(args.content);
+      const stats = await store.storageStats();
+      const contentBytes = new TextEncoder().encode(args.content).byteLength;
+      const HARD_LIMIT = 9.5 * 1024 * 1024 * 1024;
+      if (stats.totalBytes + contentBytes > HARD_LIMIT) {
+        throw new Error(
+          `R2 storage limit: ${(stats.totalBytes / 1024 ** 3).toFixed(2)} GB / 10 GB used. Archive old artifacts first.`,
+        );
+      }
       const { meta, overwritten } = await store.create(args);
       const url = urlFor(meta.id);
       return {
@@ -201,6 +209,65 @@ export function registerTools(
       return {
         content: [{ type: "text" as const, text }],
         structuredContent: { hits },
+      };
+    },
+  );
+
+  server.registerTool(
+    "storage_stats",
+    {
+      title: "Storage statistics",
+      description:
+        "Get R2 storage usage. Returns total bytes, object count, per-artifact sizes, and usage percentage against the 10 GB free tier.",
+      inputSchema: {},
+    },
+    async () => {
+      const stats = await store.storageStats();
+      const FREE_TIER = 10 * 1024 * 1024 * 1024;
+      const pct = ((stats.totalBytes / FREE_TIER) * 100).toFixed(1);
+      const totalMB = (stats.totalBytes / (1024 * 1024)).toFixed(1);
+      const top = stats.artifacts.slice(0, 10);
+      const lines = [
+        `Storage: ${totalMB} MB / 10,240 MB (${pct}%)`,
+        `Objects: ${stats.objectCount}`,
+        "",
+        "Top artifacts by size:",
+        ...top.map(
+          (a) =>
+            `  ${(a.bytes / 1024).toFixed(1)} KB  ${a.id}`,
+        ),
+      ];
+      if (parseFloat(pct) >= 80) {
+        lines.unshift(`WARNING: Storage usage at ${pct}% — consider archiving old artifacts.`);
+      }
+      return {
+        content: [{ type: "text" as const, text: lines.join("\n") }],
+        structuredContent: { ...stats, usagePercent: parseFloat(pct), freeTierBytes: FREE_TIER },
+      };
+    },
+  );
+
+  server.registerTool(
+    "artifact_delete",
+    {
+      title: "Delete artifact",
+      description:
+        "Permanently delete an artifact by id. Removes content, metadata, and index entry. Cannot be undone — archive locally first if needed.",
+      inputSchema: {
+        id: z.string().min(1),
+      },
+    },
+    async ({ id }) => {
+      if (!store.has(id)) {
+        return {
+          content: [{ type: "text" as const, text: `not found: ${id}` }],
+          isError: true,
+        };
+      }
+      await store.delete(id);
+      return {
+        content: [{ type: "text" as const, text: `Deleted ${id}` }],
+        structuredContent: { id, deleted: true },
       };
     },
   );

@@ -5,12 +5,14 @@ import type {
   CreateInput,
   ListFilter,
   SearchHit,
+  StorageStats,
   UpdateInput,
 } from "../types/artifact.js";
 
 export type StoreEvent =
   | { type: "created"; meta: ArtifactMeta }
-  | { type: "updated"; meta: ArtifactMeta };
+  | { type: "updated"; meta: ArtifactMeta }
+  | { type: "deleted"; id: string };
 
 export type StoreListener = (event: StoreEvent) => void;
 
@@ -28,4 +30,6 @@ export interface IArtifactStore {
     query: string,
     opts?: { kind?: ArtifactKind; tag?: string; limit?: number },
   ): Promise<SearchHit[]>;
+  delete(id: string): Promise<void>;
+  storageStats(): Promise<StorageStats>;
 }
