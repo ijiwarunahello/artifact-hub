@@ -118,29 +118,27 @@ function replaceUrlId(id: string | null) {
   history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-function connectWs() {
-  const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  const ws = new WebSocket(`${proto}//${location.host}/ws`);
-  ws.onopen = () => {
-    statusEl.textContent = "live";
-    statusEl.classList.add("live");
-  };
-  ws.onclose = () => {
-    statusEl.textContent = "reconnecting…";
-    statusEl.classList.remove("live");
-    setTimeout(connectWs, 1500);
-  };
-  ws.onmessage = (ev) => {
-    try {
-      const msg = JSON.parse(ev.data);
-      if (msg.type === "created" || msg.type === "updated") {
-        upsert(msg.meta);
-        if (msg.type === "updated" && msg.meta.id === selectedId) {
-          select(msg.meta.id);
-        }
+let lastPoll = new Date().toISOString();
+const POLL_INTERVAL = 3000;
+
+async function poll() {
+  try {
+    const res = await fetch(`/api/events?since=${encodeURIComponent(lastPoll)}`);
+    if (res.ok) {
+      const data = await res.json();
+      lastPoll = data.updatedSince;
+      for (const meta of data.items as ArtifactMeta[]) {
+        upsert(meta);
+        if (meta.id === selectedId) select(meta.id);
       }
-    } catch {}
-  };
+      statusEl.textContent = "live";
+      statusEl.classList.add("live");
+    }
+  } catch {
+    statusEl.textContent = "offline";
+    statusEl.classList.remove("live");
+  }
+  setTimeout(poll, POLL_INTERVAL);
 }
 
 function upsert(meta: ArtifactMeta) {
@@ -243,4 +241,4 @@ function deselect() {
 window.addEventListener("popstate", selectFromUrl);
 
 loadList().then(selectFromUrl);
-connectWs();
+poll();

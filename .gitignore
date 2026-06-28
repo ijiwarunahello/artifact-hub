@@ -4,3 +4,4 @@ dist/
 *.log
 coverage/
 .tsbuildinfo
+src/http/render-css.generated.ts

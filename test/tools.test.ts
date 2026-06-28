@@ -55,13 +55,13 @@ describe("ToolRegistry", () => {
 
 describe("GET /t/:tool dispatcher", () => {
   it("returns 404 for unknown tool", async () => {
-    const app = createHttpApp({ store, webDir: "/tmp", version: "test" });
+    const app = createHttpApp({ store, version: "test" });
     const res = await app.fetch(new Request("http://test/t/unknown-tool"));
     expect(res.status).toBe(404);
   });
 
   it("serves the STL viewer HTML for /t/stl", async () => {
-    const app = createHttpApp({ store, webDir: "/tmp", version: "test" });
+    const app = createHttpApp({ store, version: "test" });
     const res = await app.fetch(new Request("http://test/t/stl"));
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/html");

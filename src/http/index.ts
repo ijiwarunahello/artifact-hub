@@ -1,12 +1,10 @@
 import { Hono } from "hono";
-import { serveStatic } from "@hono/node-server/serve-static";
-import type { ArtifactStore } from "../store/index.js";
+import type { IArtifactStore } from "../store/interface.js";
 import { renderArtifact } from "./render.js";
 import { createToolsRouter } from "./tools/index.js";
 
 export function createHttpApp(opts: {
-  store: ArtifactStore;
-  webDir: string;
+  store: IArtifactStore;
   version: string;
 }): Hono {
   const app = new Hono();
@@ -50,6 +48,12 @@ export function createHttpApp(opts: {
     });
   });
 
+  app.get("/api/events", (c) => {
+    const since = c.req.query("since") ?? "";
+    const items = opts.store.list({ since: since || undefined });
+    return c.json({ items, updatedSince: new Date().toISOString() });
+  });
+
   app.get("/a/:id", (c) =>
     c.redirect(`/?id=${encodeURIComponent(c.req.param("id"))}`, 302),
   );
@@ -70,14 +74,6 @@ export function createHttpApp(opts: {
   });
 
   app.route("/t", createToolsRouter());
-
-  app.use(
-    "/*",
-    serveStatic({
-      root: opts.webDir,
-      rewriteRequestPath: (path) => (path === "/" ? "/index.html" : path),
-    }),
-  );
 
   return app;
 }
