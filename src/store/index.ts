@@ -10,6 +10,7 @@ import {
   KIND_EXTENSIONS,
   ListFilter,
   SearchHit,
+  StorageStats,
   UpdateInput,
 } from "../types/artifact.js";
 import type { IArtifactStore, StoreEvent, StoreListener } from "./interface.js";
@@ -106,6 +107,7 @@ export class ArtifactStore implements IArtifactStore {
     const isoNow = now.toISOString();
     const id = resolveId(input, this.index, now);
     const existing = this.index.get(id);
+    const contentBytes = new TextEncoder().encode(input.content).byteLength;
     const meta: ArtifactMeta = {
       id,
       title: input.title,
@@ -114,6 +116,7 @@ export class ArtifactStore implements IArtifactStore {
       tags: input.tags ?? [],
       source: input.source,
       summary: input.summary,
+      contentBytes,
       createdAt: existing?.createdAt ?? isoNow,
       updatedAt: isoNow,
     };
@@ -130,6 +133,12 @@ export class ArtifactStore implements IArtifactStore {
       throw new Error(`artifact not found: ${input.id}`);
     }
     const isoNow = this.now().toISOString();
+    let content = input.content;
+    if (content === undefined) {
+      const current = await fs.readFile(this.contentPath(existing), "utf8");
+      content = current;
+    }
+    const contentBytes = new TextEncoder().encode(content).byteLength;
     const meta: ArtifactMeta = {
       ...existing,
       title: input.title ?? existing.title,
@@ -137,13 +146,9 @@ export class ArtifactStore implements IArtifactStore {
       summary: input.summary ?? existing.summary,
       language: input.language ?? existing.language,
       source: input.source ?? existing.source,
+      contentBytes,
       updatedAt: isoNow,
     };
-    let content = input.content;
-    if (content === undefined) {
-      const current = await fs.readFile(this.contentPath(existing), "utf8");
-      content = current;
-    }
     if (meta.language !== existing.language || meta.kind !== existing.kind) {
       try {
         await fs.unlink(this.contentPath(existing));
@@ -227,6 +232,31 @@ export class ArtifactStore implements IArtifactStore {
 
   metas(): ArtifactMeta[] {
     return [...this.index.values()];
+  }
+
+  async delete(id: string): Promise<void> {
+    if (!this.index.has(id)) {
+      throw new Error(`artifact not found: ${id}`);
+    }
+    await fs.rm(join(this.artifactsDir, id), { recursive: true, force: true });
+    this.index.delete(id);
+    await this.persistIndex();
+    this.emit({ type: "deleted", id });
+  }
+
+  async storageStats(): Promise<StorageStats> {
+    const artifacts: StorageStats["artifacts"] = [];
+    for (const meta of this.index.values()) {
+      try {
+        const stat = await fs.stat(this.contentPath(meta));
+        artifacts.push({ id: meta.id, bytes: stat.size, updatedAt: meta.updatedAt });
+      } catch {
+        artifacts.push({ id: meta.id, bytes: 0, updatedAt: meta.updatedAt });
+      }
+    }
+    artifacts.sort((a, b) => b.bytes - a.bytes);
+    const totalBytes = artifacts.reduce((sum, a) => sum + a.bytes, 0);
+    return { totalBytes, objectCount: artifacts.length, artifacts };
   }
 }
 
