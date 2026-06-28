@@ -1,20 +1,7 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js";
 import type { Artifact } from "../types/artifact.js";
-
-const require_ = createRequire(import.meta.url);
-const HLJS_LIGHT = readFileSync(
-  resolve(dirname(require_.resolve("highlight.js/package.json")), "styles", "github.min.css"),
-  "utf8",
-);
-const HLJS_DARK = readFileSync(
-  resolve(dirname(require_.resolve("highlight.js/package.json")), "styles", "github-dark.min.css"),
-  "utf8",
-);
+import { HLJS_LIGHT, HLJS_DARK } from "./render-css.generated.js";
 
 const md: MarkdownIt = new MarkdownIt({
   html: false,

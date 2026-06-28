@@ -3,35 +3,33 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Local MCP/Web artifact hub for sharing research and outputs between Claude Code, Codex, and humans",
+  "description": "MCP/Web artifact hub for sharing research and outputs between Claude Code, Codex, and humans",
   "scripts": {
-    "build:server": "tsc -p tsconfig.json",
+    "build:css": "node scripts/embed-css.mjs",
     "build:web": "vite build",
-    "build": "npm run build:server && npm run build:web",
-    "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js",
-    "start:tailscale": "node scripts/start-tailscale.mjs",
+    "build": "npm run build:css && npm run build:web",
+    "dev": "npm run build:css && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "hono": "^4.6.10",
-    "@hono/node-server": "^1.13.7",
-    "ws": "^8.18.0",
-    "markdown-it": "^14.1.0",
     "highlight.js": "^11.10.0",
+    "hono": "^4.6.10",
+    "markdown-it": "^14.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260628.1",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.9.0",
-    "@types/ws": "^8.5.13",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
-    "vitest": "^2.1.5"
+    "vitest": "^2.1.5",
+    "wrangler": "^4.105.0"
   },
   "engines": {
     "node": ">=20"

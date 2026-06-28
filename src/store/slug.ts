@@ -1,6 +1,13 @@
-import { createHash } from "node:crypto";
-
 const ASCII_SAFE = /[^a-z0-9-]+/g;
+
+function fnv1a(input: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
 
 export function slugify(input: string, maxLen = 40): string {
   const lower = input.toLowerCase().trim();
@@ -12,8 +19,7 @@ export function slugify(input: string, maxLen = 40): string {
   if (trimmed.length > 0) {
     return trimmed.slice(0, maxLen);
   }
-  const hash = createHash("sha1").update(input).digest("hex").slice(0, 8);
-  return `untitled-${hash}`;
+  return `untitled-${fnv1a(input)}`;
 }
 
 export function todayPrefix(now: Date = new Date()): string {
@@ -30,6 +36,5 @@ export function buildId(title: string, existing: Set<string>, now: Date = new Da
     const candidate = `${base}-${i}`;
     if (!existing.has(candidate)) return candidate;
   }
-  const hash = createHash("sha1").update(`${title}-${now.toISOString()}`).digest("hex").slice(0, 8);
-  return `${base}-${hash}`;
+  return `${base}-${fnv1a(`${title}-${now.toISOString()}`)}`;
 }

@@ -26,7 +26,7 @@ describe("GET /api/artifacts/:id/content", () => {
       language: "stl",
       content: "solid bracket\nendsolid bracket\n",
     });
-    const app = createHttpApp({ store, webDir: "/tmp", version: "test" });
+    const app = createHttpApp({ store, version: "test" });
     const res = await app.fetch(
       new Request(`http://test/api/artifacts/${meta.id}/content`),
     );
@@ -37,7 +37,7 @@ describe("GET /api/artifacts/:id/content", () => {
   });
 
   it("returns 404 for unknown id", async () => {
-    const app = createHttpApp({ store, webDir: "/tmp", version: "test" });
+    const app = createHttpApp({ store, version: "test" });
     const res = await app.fetch(
       new Request("http://test/api/artifacts/does-not-exist/content"),
     );

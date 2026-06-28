@@ -17,10 +17,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://127.0.0.1:27183",
-      "/ws": { target: "ws://127.0.0.1:27183", ws: true },
-      "/render": "http://127.0.0.1:27183",
-      "/t": "http://127.0.0.1:27183",
+      "/api": "http://127.0.0.1:8787",
+      "/render": "http://127.0.0.1:8787",
+      "/t": "http://127.0.0.1:8787",
+      "/mcp": "http://127.0.0.1:8787",
     },
   },
 });

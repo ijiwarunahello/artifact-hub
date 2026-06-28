@@ -1,49 +1,35 @@
-import { promises as fs } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
 import {
   ARTIFACT_KINDS,
-  Artifact,
-  ArtifactKind,
-  ArtifactMeta,
-  CreateInput,
-  KIND_EXTENSIONS,
-  ListFilter,
-  SearchHit,
-  UpdateInput,
+  type Artifact,
+  type ArtifactKind,
+  type ArtifactMeta,
+  type CreateInput,
+  type ListFilter,
+  type SearchHit,
+  type UpdateInput,
 } from "../types/artifact.js";
 import type { IArtifactStore, StoreEvent, StoreListener } from "./interface.js";
 import { buildId, slugify, todayPrefix } from "./slug.js";
 
-export type { IArtifactStore, StoreEvent, StoreListener } from "./interface.js";
-
-export interface StoreOptions {
-  rootDir?: string;
-  now?: () => Date;
-}
-
-const META_FILE = "meta.json";
-
-export class ArtifactStore implements IArtifactStore {
-  readonly rootDir: string;
-  private readonly artifactsDir: string;
-  private readonly indexFile: string;
-  private readonly now: () => Date;
+export class CloudflareStore implements IArtifactStore {
+  private readonly kv: KVNamespace;
+  private readonly r2: R2Bucket;
   private readonly index = new Map<string, ArtifactMeta>();
   private readonly listeners = new Set<StoreListener>();
   private ready = false;
 
-  constructor(options: StoreOptions = {}) {
-    this.rootDir = options.rootDir ?? join(homedir(), ".artifact-hub");
-    this.artifactsDir = join(this.rootDir, "artifacts");
-    this.indexFile = join(this.rootDir, "index.json");
-    this.now = options.now ?? (() => new Date());
+  constructor(kv: KVNamespace, r2: R2Bucket) {
+    this.kv = kv;
+    this.r2 = r2;
   }
 
   async init(): Promise<void> {
     if (this.ready) return;
-    await fs.mkdir(this.artifactsDir, { recursive: true });
-    await this.rebuildIndex();
+    const raw = await this.kv.get("index");
+    if (raw) {
+      const metas = JSON.parse(raw) as ArtifactMeta[];
+      for (const m of metas) this.index.set(m.id, m);
+    }
     this.ready = true;
   }
 
@@ -57,52 +43,24 @@ export class ArtifactStore implements IArtifactStore {
       try {
         listener(event);
       } catch (err) {
-        console.error("[store] listener error", err);
+        console.error("[cloudflare-store] listener error", err);
       }
     }
-  }
-
-  private async rebuildIndex(): Promise<void> {
-    this.index.clear();
-    let entries: string[] = [];
-    try {
-      entries = await fs.readdir(this.artifactsDir);
-    } catch {
-      return;
-    }
-    for (const id of entries) {
-      const metaPath = join(this.artifactsDir, id, META_FILE);
-      try {
-        const raw = await fs.readFile(metaPath, "utf8");
-        const meta = JSON.parse(raw) as ArtifactMeta;
-        this.index.set(meta.id, meta);
-      } catch {
-        // skip malformed
-      }
-    }
-    await this.persistIndex();
   }
 
   private async persistIndex(): Promise<void> {
     const list = [...this.index.values()].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt),
     );
-    await fs.writeFile(this.indexFile, JSON.stringify(list, null, 2), "utf8");
-  }
-
-  private contentPath(meta: ArtifactMeta): string {
-    const ext =
-      meta.kind === "code" && meta.language
-        ? safeExt(meta.language)
-        : KIND_EXTENSIONS[meta.kind];
-    return join(this.artifactsDir, meta.id, `content.${ext}`);
+    await this.kv.put("index", JSON.stringify(list));
+    await this.kv.put("updated", new Date().toISOString());
   }
 
   async create(input: CreateInput): Promise<{ meta: ArtifactMeta; overwritten: boolean }> {
     if (!ARTIFACT_KINDS.includes(input.kind)) {
       throw new Error(`unknown kind: ${input.kind}`);
     }
-    const now = this.now();
+    const now = new Date();
     const isoNow = now.toISOString();
     const id = resolveId(input, this.index, now);
     const existing = this.index.get(id);
@@ -117,7 +75,8 @@ export class ArtifactStore implements IArtifactStore {
       createdAt: existing?.createdAt ?? isoNow,
       updatedAt: isoNow,
     };
-    await this.writeArtifact(meta, input.content);
+    await this.r2.put(`content/${id}`, input.content);
+    await this.kv.put(`meta:${id}`, JSON.stringify(meta));
     this.index.set(id, meta);
     await this.persistIndex();
     this.emit({ type: existing ? "updated" : "created", meta });
@@ -129,7 +88,7 @@ export class ArtifactStore implements IArtifactStore {
     if (!existing) {
       throw new Error(`artifact not found: ${input.id}`);
     }
-    const isoNow = this.now().toISOString();
+    const isoNow = new Date().toISOString();
     const meta: ArtifactMeta = {
       ...existing,
       title: input.title ?? existing.title,
@@ -139,30 +98,20 @@ export class ArtifactStore implements IArtifactStore {
       source: input.source ?? existing.source,
       updatedAt: isoNow,
     };
-    let content = input.content;
-    if (content === undefined) {
-      const current = await fs.readFile(this.contentPath(existing), "utf8");
-      content = current;
-    }
-    if (meta.language !== existing.language || meta.kind !== existing.kind) {
-      try {
-        await fs.unlink(this.contentPath(existing));
-      } catch {
-        // ignore
-      }
-    }
-    await this.writeArtifact(meta, content);
+    const content = input.content ?? await this.readContent(input.id);
+    await this.r2.put(`content/${meta.id}`, content);
+    await this.kv.put(`meta:${meta.id}`, JSON.stringify(meta));
     this.index.set(meta.id, meta);
     await this.persistIndex();
     this.emit({ type: "updated", meta });
     return meta;
   }
 
-  private async writeArtifact(meta: ArtifactMeta, content: string): Promise<void> {
-    const dir = join(this.artifactsDir, meta.id);
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(join(dir, META_FILE), JSON.stringify(meta, null, 2), "utf8");
-    await fs.writeFile(this.contentPath(meta), content, "utf8");
+  async get(id: string): Promise<Artifact | undefined> {
+    const meta = this.index.get(id);
+    if (!meta) return undefined;
+    const content = await this.readContent(id);
+    return { ...meta, content };
   }
 
   list(filter: ListFilter = {}): ArtifactMeta[] {
@@ -186,15 +135,8 @@ export class ArtifactStore implements IArtifactStore {
     return this.index.get(id);
   }
 
-  async get(id: string): Promise<Artifact | undefined> {
-    const meta = this.index.get(id);
-    if (!meta) return undefined;
-    try {
-      const content = await fs.readFile(this.contentPath(meta), "utf8");
-      return { ...meta, content };
-    } catch {
-      return undefined;
-    }
+  metas(): ArtifactMeta[] {
+    return [...this.index.values()];
   }
 
   async search(
@@ -207,13 +149,8 @@ export class ArtifactStore implements IArtifactStore {
     const limit = opts.limit ?? 20;
     const candidates = this.list({ kind: opts.kind, tag: opts.tag });
     for (const meta of candidates) {
-      const text = await fs.readFile(this.contentPath(meta), "utf8").catch(() => "");
-      const haystack = [
-        meta.title,
-        meta.summary ?? "",
-        meta.tags.join(" "),
-        text,
-      ].join("\n");
+      const text = await this.readContent(meta.id).catch(() => "");
+      const haystack = [meta.title, meta.summary ?? "", meta.tags.join(" "), text].join("\n");
       const idx = haystack.toLowerCase().indexOf(q);
       if (idx === -1) continue;
       const start = Math.max(0, idx - 60);
@@ -225,8 +162,10 @@ export class ArtifactStore implements IArtifactStore {
     return hits;
   }
 
-  metas(): ArtifactMeta[] {
-    return [...this.index.values()];
+  private async readContent(id: string): Promise<string> {
+    const obj = await this.r2.get(`content/${id}`);
+    if (!obj) return "";
+    return await obj.text();
   }
 }
 
@@ -246,8 +185,4 @@ function resolveId(
   const dated = `${todayPrefix(now)}-${titleSlug}`;
   if (!index.has(dated)) return dated;
   return buildId(input.title, new Set(index.keys()), now);
-}
-
-function safeExt(language: string): string {
-  return language.toLowerCase().replace(/[^a-z0-9.]+/g, "").slice(0, 10) || "txt";
 }
