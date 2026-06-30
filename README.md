@@ -1,138 +1,121 @@
 # Artifact Hub
 
-Local MCP/Web server that lets Claude Code, Codex, and other agents share research,
-analysis, and code outputs as live "artifacts" — and lets a human watch and learn
-from those outputs in a browser as they land.
-
-## What is an artifact?
-
-A single addressable unit of agent output:
-
-- `html` — interactive page, rendered in a sandboxed iframe
-- `markdown` — rich text doc with code fences (highlighted)
-- `svg` — vector diagram
-- `mermaid` — diagram source rendered client-side
-- `code` — syntax-highlighted source file
-
-Each artifact has `id`, `title`, `tags`, `summary`, and a content body. Stored as
-files under `~/.artifact-hub/artifacts/<id>/`.
+Artifact Hub is a Cloudflare Workers MCP server and browser UI for sharing durable
+research, demos, diagrams, and code between Claude Code, Codex, and humans.
 
 ## Architecture
 
-```
-agents (Claude Code / Codex) ──MCP──▶ Artifact Hub (Node)
-                                          │
-                                          └──WebSocket──▶ Browser (human)
-```
-
-- **MCP** over Streamable HTTP at `http://127.0.0.1:27183/mcp`
-- **Web UI** at `http://127.0.0.1:27183/`
-- **Storage** at `~/.artifact-hub/`
-
-## Quickstart
-
-```bash
-npm install
-npm run build
-npm start
-# open http://127.0.0.1:27183/
+```text
+Claude Code / Codex ── Streamable HTTP MCP ──▶ Cloudflare Workers
+                                                    │
+                                                    ├── KV: metadata and index
+                                                    ├── R2: artifact content
+                                                    └── Static assets: Web UI
 ```
 
-For development:
+- Web UI: <https://artifact-hub.ijiwarunahello.workers.dev>
+- MCP: `https://artifact-hub.ijiwarunahello.workers.dev/mcp`
+- Authentication: Cloudflare Access Service Token
+- Deployment: pushes to `main` deploy through GitHub Actions
 
-```bash
-npm run dev       # server with watch
-npm run build:web # rebuild UI bundle
-```
+## Install the agent plugin
 
-### Sharing over Tailscale
-
-To make the web UI reachable from other devices on your tailnet:
-
-```bash
-npm run build
-npm run start:tailscale
-```
-
-This resolves the host's Tailscale IPv4 (via `tailscale ip -4`), prints a
-tailnet URL like `http://100.x.y.z:27183/`, and binds the server to `0.0.0.0`.
-The MCP `publicBaseUrl` stays at `127.0.0.1`, so MCP clients on the host (Claude
-Code / Codex) keep talking to loopback; tailnet devices browse the hub directly
-at the printed tailnet URL.
-
-Requirements:
-- The `tailscale` CLI must be on PATH and signed in. The script exits with
-  status 1 if Tailscale is not installed or not connected.
-
-> **Heads up:** binding to `0.0.0.0` also exposes the server to any other
-> network the machine is on (LAN, etc.), not only Tailscale. If that matters,
-> use a firewall or stick with the default `npm start`.
-
-For unattended startup at login, `./scripts/install-launchagent.sh` installs a
-LaunchAgent with the same `HOST=0.0.0.0` + `PUBLIC_HOST=127.0.0.1` env so the
-hub is available over Tailscale without invoking the `tailscale` CLI at boot
-(which is unreliable under launchd when using the Tailscale macOS GUI app).
-
-## Installing the agent clients
+The same plugin bundles the Artifact Hub skills and MCP connection for Claude
+Code and Codex. Before installing it, create a Cloudflare Access Service Token
+and include it in a `Service Auth` policy for the Artifact Hub Access
+application.
 
 ### Claude Code
 
-```bash
-./scripts/install-client.sh claude-code
-# then inside Claude Code:
-#   /plugin marketplace add ~/.claude/plugins/marketplaces/artifact-hub
-#   /plugin install artifact-hub@artifact-hub
+Inside Claude Code:
+
+```text
+/plugin marketplace add /absolute/path/to/artifact-hub
+/plugin install artifact-hub@artifact-hub
 ```
 
 ### Codex
 
-```bash
-./scripts/install-client.sh codex
-# this appends [mcp_servers.artifact_hub] to ~/.codex/config.toml
-```
-
-## MCP tool surface
-
-| Tool              | Purpose                                                |
-|-------------------|--------------------------------------------------------|
-| `artifact_create` | Upload a new artifact (or overwrite by id)             |
-| `artifact_update` | Patch fields/content of an existing artifact           |
-| `artifact_list`   | Lightweight metadata listing with filters              |
-| `artifact_get`    | Fetch full content for context injection               |
-| `artifact_search` | Full-text search with snippet                          |
-| `tool_stl_view`   | Return a browser URL that renders an STL model in 3D   |
-
-There is no delete tool. Remove artifacts manually with
-`rm -rf ~/.artifact-hub/artifacts/<id>` and restart the server.
-
-## Tools (single-shot utilities)
-
-In addition to artifacts, the hub hosts a `/t/<tool>` namespace for stateless
-utilities that turn an input into an in-browser view. Unlike artifacts these
-are not persisted, not searchable, and not listed in the Web UI side panel.
-
-| Tool       | URL          | Inputs                                        |
-|------------|--------------|-----------------------------------------------|
-| STL Preview| `/t/stl`     | `?artifact=<id>`, `?src=<url>`, or drag-drop  |
-
-### STL Preview
-
-`/t/stl` renders binary or ASCII STL models with three.js (OrbitControls,
-auto camera fit). Three input paths:
-
-- `/t/stl?artifact=<id>` — load an ASCII STL stored as `kind=code, language=stl`
-- `/t/stl?src=<url>` — fetch any STL the browser can reach (CORS applies)
-- drop an `.stl` file onto the viewer page
-
-Artifact-detail pages automatically show an **open in stl preview** link when
-the artifact is recognized as STL (`kind=code, language=stl`).
-
-The `tool_stl_view` MCP tool returns the corresponding URL given an
-`artifact_id` or `src` so agents can hand the link to a human.
-
-## Running as a LaunchAgent
+From a terminal:
 
 ```bash
-./scripts/install-launchagent.sh
-launchctl load ~/Library/LaunchAgents/com.ijiwarunahello.artifact-hub.plist
+codex plugin marketplace add /absolute/path/to/artifact-hub
 ```
+
+Open `/plugins`, select the Artifact Hub marketplace, and install
+`artifact-hub`.
+
+### Configure Cloudflare Access credentials
+
+After installing the plugin, run this script from the repository:
+
+```bash
+./scripts/install-client.sh
+source ~/.zshenv
+```
+
+The script prompts for the Client ID and Client Secret without echoing the
+secret, then maintains these variables in `~/.zshenv`:
+
+```text
+ARTIFACT_HUB_ACCESS_CLIENT_ID
+ARTIFACT_HUB_ACCESS_CLIENT_SECRET
+```
+
+Restart Codex CLI after sourcing the file. For Codex app, add the same two
+variables through Local Environments and start a new thread. For Claude Code,
+run `/reload-plugins` or restart it. Confirm the connection by calling
+`artifact_list`.
+
+Do not commit Service Token values. The plugin contains only environment
+variable references.
+
+## Migrate an existing local installation
+
+1. Remove the manually configured `[mcp_servers.artifact_hub]` block from
+   `~/.codex/config.toml`; the Codex plugin now owns that MCP registration.
+2. Disable or uninstall the old Claude Code plugin whose MCP endpoint points to
+   localhost.
+3. Install the dual-platform plugin and configure the Access variables as
+   described above.
+4. Restart both clients and verify `artifact_list`.
+
+## MCP tools
+
+| Tool | Purpose |
+|---|---|
+| `artifact_create` | Create or replace an artifact |
+| `artifact_update` | Update an artifact |
+| `artifact_list` | List artifact metadata |
+| `artifact_get` | Fetch content and metadata |
+| `artifact_search` | Search content |
+| `storage_stats` | Inspect R2 usage |
+| `artifact_delete` | Permanently delete an artifact |
+| `tool_stl_view` | Build an STL preview URL |
+
+## Development
+
+Requirements: Node.js 20 or newer and a Cloudflare account configured for
+Wrangler.
+
+```bash
+npm install
+npm run dev
+```
+
+`wrangler dev` provides local KV and R2 emulation. Its data is separate from
+the deployed Worker. Run the checks before deployment:
+
+```bash
+npm run typecheck
+npm test
+npm run build
+```
+
+Deploy manually with `npm run deploy`. To migrate legacy filesystem artifacts
+to the remote KV/R2 resources, run `npx tsx scripts/migrate-data.ts`; its
+Wrangler writes use `--remote`.
+
+Cloudflare configuration lives in `wrangler.toml`. The `ARTIFACT_KV` binding
+stores metadata and indexes, `ARTIFACT_R2` stores content, and
+`PUBLIC_BASE_URL` supplies public artifact links.

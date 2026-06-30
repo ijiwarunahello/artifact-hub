@@ -1,0 +1,20 @@
+{
+  "name": "artifact-hub",
+  "version": "0.1.0",
+  "description": "Connect Codex to Artifact Hub on Cloudflare Workers.",
+  "author": { "name": "ijiwarunahello" },
+  "skills": "./skills/",
+  "mcpServers": "./codex.mcp.json",
+  "interface": {
+    "displayName": "Artifact Hub",
+    "shortDescription": "Share durable artifacts through Cloudflare Workers",
+    "longDescription": "Connect Codex to the Artifact Hub MCP server protected by Cloudflare Access.",
+    "developerName": "ijiwarunahello",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Use Artifact Hub to find related prior work.",
+      "Publish this result to Artifact Hub."
+    ]
+  }
+}
