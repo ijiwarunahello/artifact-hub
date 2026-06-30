@@ -1,13 +1,13 @@
 ---
 name: using-artifact-hub
-description: Use when you finish meaningful research, build a runnable HTML demo, or want to share output with another agent or with the human across sessions — publishes the result to the local Artifact Hub MCP server so a human can view it in a browser and other agents can fetch it later.
+description: Use when you finish meaningful research, build a runnable HTML demo, or want to share output with another agent or with the human across sessions — publishes the result to the Artifact Hub MCP server so a human can view it in a browser and other agents can fetch it later.
 ---
 
 # Using Artifact Hub
 
-The Artifact Hub is a local always-on MCP server at `http://127.0.0.1:27183`. It stores
-"artifacts" — durable, addressable pieces of agent output — and pushes new ones live to
-a browser dashboard the human keeps open.
+Artifact Hub is a Cloudflare Workers MCP server protected by Cloudflare Access.
+It stores durable, addressable agent output in KV and R2 and exposes it through
+a browser dashboard.
 
 ## When to publish
 

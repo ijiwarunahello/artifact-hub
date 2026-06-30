@@ -1,0 +1,6 @@
+{
+  "name": "artifact-hub",
+  "version": "0.1.0",
+  "description": "Connect Claude Code to Artifact Hub on Cloudflare Workers.",
+  "author": { "name": "ijiwarunahello" }
+}

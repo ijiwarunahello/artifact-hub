@@ -1,5 +1,0 @@
-# Append to ~/.codex/config.toml to expose Artifact Hub as an MCP server to Codex CLI.
-# After editing the file, restart Codex.
-
-[mcp_servers.artifact_hub]
-url = "http://127.0.0.1:27183/mcp"

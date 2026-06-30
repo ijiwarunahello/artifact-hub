@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "artifact-hub": {
+      "type": "http",
+      "url": "https://artifact-hub.ijiwarunahello.workers.dev/mcp",
+      "headers": {
+        "CF-Access-Client-Id": "${ARTIFACT_HUB_ACCESS_CLIENT_ID}",
+        "CF-Access-Client-Secret": "${ARTIFACT_HUB_ACCESS_CLIENT_SECRET}"
+      }
+    }
+  }
+}

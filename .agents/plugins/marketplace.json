@@ -1,0 +1,20 @@
+{
+  "name": "artifact-hub",
+  "interface": {
+    "displayName": "Artifact Hub"
+  },
+  "plugins": [
+    {
+      "name": "artifact-hub",
+      "source": {
+        "source": "local",
+        "path": "./clients/agent-plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
